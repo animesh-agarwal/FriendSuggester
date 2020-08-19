@@ -6,7 +6,7 @@ package com.friendsuggester.exceptions;
  */
 public class ErrorConstants {
 
-	public static final String REQUEST_ALREADY_SENT = "User %s has already sent request to user %";
+	public static final String REQUEST_ALREADY_SENT = "User %s has already sent request to user %s";
 	public static final String USER_DOESNT_EXIST = "User %s doesn't exist";
 	public static final String NO_PENDING_REQUESTS = "User %s doesn't have any pending friend requests";
 	public static final String NO_FRIENDS = "User %s doesn't have any friends";
