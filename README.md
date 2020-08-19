@@ -16,6 +16,7 @@ Project configurations can be changed in https://github.com/animesh-agarwal/Frie
 ## Instruction to build and run the project
 1. `mvn clean package shade:shade`
 2. `java -jar FriendSuggester-0.0.1-SNAPSHOT-fat.jar -conf conf/config.json`
+3. Start redis-server ( Default at `127.0.0.1:6379`) 
 
 Prerequisite to build this project:
 1. Java JDK 8 (http://www.oracle.com/technetwork/java/javase/downloads/jdk8-downloads-2133151.html)
