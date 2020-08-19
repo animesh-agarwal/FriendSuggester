@@ -14,4 +14,5 @@ public class RouteConstants {
 	public static final String GET_FRIEND_REQUESTS = "/friendRequests/:userA";
 	public static final String CREATE_USER = "/create";
 	public static final String GET_FRIENDS = "/friends/:userA";
+	public static final String GET_SUGGESTED_FRIENDS = "/suggestions/:userA";
 }

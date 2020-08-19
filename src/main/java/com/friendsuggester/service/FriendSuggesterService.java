@@ -39,5 +39,11 @@ public interface FriendSuggesterService {
 	 * Gets all the friends for the user 
 	 */
 	public Future<List<String>> getAllFriends(String user);
+	
+	/**
+	 * @param user
+	 * Gets all the suggested friends for the user 
+	 */
+	public Future<List<String>> getSuggestions(String user);
 
 }

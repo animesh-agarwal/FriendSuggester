@@ -7,6 +7,7 @@ import java.util.stream.Collectors;
 
 import com.friendsuggester.exceptions.ErrorConstants;
 import com.friendsuggester.exceptions.FriendSuggesterExceptions;
+import com.friendsuggester.lua.LuaScript;
 import com.friendsuggester.models.User;
 import com.friendsuggester.service.FriendSuggesterService;
 
@@ -29,16 +30,14 @@ public class RedisService implements FriendSuggesterService {
 	private static final Logger logger = LoggerFactory.getLogger(RedisService.class);
 	private static final String FRIENDS_PREFIX = "friends:";
 	private static final String PENDING_FRIENDS_PREFIX = "pendingfriends:";
-	
-	private static final String DEFAULT_REDIS_HOST="127.0.0.1";
-	private static final int DEFAULT_REDIS_PORT=6379;
-	
+
+	private static final String DEFAULT_REDIS_HOST = "127.0.0.1";
+	private static final int DEFAULT_REDIS_PORT = 6379;
 
 	public RedisService(Vertx vertx, JsonObject config) {
 		String host = config.getString("service.host", DEFAULT_REDIS_HOST);
 		int port = config.getInteger("service.port", DEFAULT_REDIS_PORT);
-		RedisOptions redisOptions = new RedisOptions().setHost(host)
-				.setPort(port);
+		RedisOptions redisOptions = new RedisOptions().setHost(host).setPort(port);
 		logger.info("Connecting to Redis on " + host + ":" + port);
 		redisClient = RedisClient.create(vertx, redisOptions);
 	}
@@ -55,7 +54,7 @@ public class RedisService implements FriendSuggesterService {
 		});
 		return result;
 	}
-	
+
 	@Override
 	public Future<Boolean> createUser(User user) {
 		Future<Boolean> result = Future.future();
@@ -63,7 +62,7 @@ public class RedisService implements FriendSuggesterService {
 		List<String> keys = new ArrayList<String>(Arrays.asList(uKey));
 		List<String> args = new ArrayList<String>(Arrays.asList("username", uKey, "firstName", user.getFirstName(),
 				"lastName", user.getLastName(), "email", user.getEmail()));
-		redisClient.eval(createUserScript(), keys, args, res -> {
+		redisClient.eval(LuaScript.CREATE_USER_SCRIPT, keys, args, res -> {
 			if (res.succeeded()) {
 				JsonArray array = res.result();
 				long val = (Long) array.getValue(0);
@@ -89,7 +88,7 @@ public class RedisService implements FriendSuggesterService {
 		keys.add(FRIENDS_PREFIX + userB);
 		List<String> args = new ArrayList<String>(Arrays.asList(userA, userB));
 
-		redisClient.eval(addFriendScript(), keys, args, res -> {
+		redisClient.eval(LuaScript.ADD_FRIEND_SCRIPT, keys, args, res -> {
 			if (res.succeeded()) {
 				JsonArray array = res.result();
 				long val = (Long) array.getValue(0);
@@ -119,15 +118,15 @@ public class RedisService implements FriendSuggesterService {
 	public Future<List<String>> getAllFriends(String user) {
 		return getList(user, FRIENDS_PREFIX);
 	}
-	
-	private Future<List<String>> getList(String user, String key) {
+
+	@Override
+	public Future<List<String>> getSuggestions(String user) {
 		Future<List<String>> result = Future.future();
-		redisClient.smembers(key+user, res -> {
+		List<String> keys = new ArrayList<String>(Arrays.asList(FRIENDS_PREFIX + user));
+		redisClient.eval(LuaScript.GET_SUGGESTED_FRIENDS, keys, new ArrayList<String>(), res -> {
 			if (res.succeeded()) {
-				result.complete(res.result()
-						.stream()
-						.map(r -> (String) r)
-						.collect(Collectors.toList()));
+				result.complete(res.result().stream().map(r -> (String) r).collect(Collectors.toList()));
+
 			} else {
 				result.fail(res.cause());
 			}
@@ -135,41 +134,16 @@ public class RedisService implements FriendSuggesterService {
 		return result;
 	}
 
-	private String addFriendScript() {
-		String addFriendScript = ""
-				+ "\nlocal areAlreadyFriends = tonumber(redis.call('SISMEMBER', KEYS[3], ARGV[2]));"
-				+ "\nif (areAlreadyFriends == 1)"
-				+ "\nthen"
-				+ "\n return -1"
-				+ "\nend"
-				+ "\nlocal isAlreadyRequested = tonumber(redis.call('SISMEMBER', KEYS[2], ARGV[1]));"
-				+ "\nlocal isReversePending = tonumber(redis.call('SISMEMBER', KEYS[1], ARGV[2]));"
-				+ "\nif (isReversePending ==1)"
-				+ "\nthen" 
-				+ "\n local removePending = redis.call('SREM', KEYS[1], ARGV[2]);"
-				+ "\n local addAtoB = redis.call('SADD', KEYS[3], ARGV[2]);"
-				+ "\n local addBtoA = redis.call('SADD', KEYS[4], ARGV[1]);"
-				+ "\n return 1"
-				+ "\nelseif(isAlreadyRequested == 1)"
-				+ "\nthen" 
-				+ "\n  return 0"
-				+ "\nelse" 
-				+ "\n  local addPendingtoB=redis.call('SADD', KEYS[2], ARGV[1]);"
-				+ "\n   return 1"
-				+ "\nend";
-		return addFriendScript;
-	}
-	
-	private String createUserScript() {
-		String createUserScript = ""
-				+ "\nlocal isUserPresent = tonumber(redis.call('HEXISTS', KEYS[1], ARGV[1]));"
-				+ "\nif (isUserPresent == 1)"
-				+ "\nthen" 
-				+ "\n    return -1"
-				+ "\nend"
-				+ "\nlocal createUser = redis.call('HMSET', KEYS[1], unpack(ARGV));"
-				+ "\nreturn 1";
-		return createUserScript;
+	private Future<List<String>> getList(String user, String key) {
+		Future<List<String>> result = Future.future();
+		redisClient.smembers(key + user, res -> {
+			if (res.succeeded()) {
+				result.complete(res.result().stream().map(r -> (String) r).collect(Collectors.toList()));
+			} else {
+				result.fail(res.cause());
+			}
+		});
+		return result;
 	}
 
 }

@@ -1,58 +1,25 @@
 package com.friendsuggester.models;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 /**
  * POJO class for the user entity. Builder pattern is used to create the User object
  *
  */
 public class User {
 
-	public static class UserBuilder {
-		private String username;
-		private String firstName;
-		private String lastName;
-		private String email;
-
-		public UserBuilder(String userName) {
-			this.username = userName;
-		}
-
-		public UserBuilder withFirstName(String firstName) {
-			this.firstName = firstName;
-			return this;
-		}
-
-		public UserBuilder withLastName(String lastName) {
-			this.lastName = lastName;
-			return this;
-		}
-
-		public UserBuilder withEmail(String email) {
-			this.email = email;
-			return this;
-		}
-
-		public User build() {
-			User user = new User();
-			user.username = this.username;
-			user.email = this.email;
-			user.firstName = this.firstName;
-			user.lastName = this.lastName;
-			return user;
-		}
-
-	}
-
-	private String username;
+	@JsonProperty("username")
+	private String userName;
 	private String firstName;
 	private String lastName;
 	private String email;
 
 	public String getUserName() {
-		return username;
+		return userName;
 	}
 
 	public void setUserName(String userName) {
-		this.username = userName;
+		this.userName = userName;
 	}
 
 	public String getFirstName() {

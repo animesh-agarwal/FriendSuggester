@@ -40,11 +40,12 @@ public class FriendSuggesterVerticle extends AbstractVerticle {
 	public void start(Future<Void> future) throws Exception {
 		initializeService();
 		Router router = initRouter();
-		
+
 		router.post(RouteConstants.CREATE_USER).handler(this::createUser);
 		router.post(RouteConstants.ADD_FRIEND).handler(this::addFriend);
 		router.get(RouteConstants.GET_FRIEND_REQUESTS).handler(this::getFriendRequests);
 		router.get(RouteConstants.GET_FRIENDS).handler(this::getAllFriends);
+		router.get(RouteConstants.GET_SUGGESTED_FRIENDS).handler(this::getSuggestedFriends);
 
 		String host = config().getString("http.host", DEFAULT_HOST);
 		int port = config().getInteger("http.port", DEFAULT_PORT);
@@ -60,7 +61,7 @@ public class FriendSuggesterVerticle extends AbstractVerticle {
 	}
 
 	/**
-	 * Initializes the service and checks whether the persistence layer is running 
+	 * Initializes the service and checks whether the persistence layer is running
 	 */
 	private void initializeService() {
 		String serviceType = config().getString("service", DEFAULT_SERVICE);
@@ -135,7 +136,7 @@ public class FriendSuggesterVerticle extends AbstractVerticle {
 
 	private void getFriendRequests(RoutingContext context) {
 		String userA = context.request().getParam("userA");
-		logger.info("Getting pending friend requests for "+ userA);
+		logger.info("Getting pending friend requests for " + userA);
 		if (null == userA) {
 			sendResponse(context, 400, failedResponse(String.format(ErrorConstants.INVALID_PARAM, "userA")));
 			return;
@@ -157,7 +158,7 @@ public class FriendSuggesterVerticle extends AbstractVerticle {
 
 	private void getAllFriends(RoutingContext context) {
 		String userA = context.request().getParam("userA");
-		logger.info("Getting all friends for "+ userA);
+		logger.info("Getting all friends for " + userA);
 		if (null == userA) {
 			sendResponse(context, 400, failedResponse(String.format(ErrorConstants.INVALID_PARAM, "userA")));
 		}
@@ -168,6 +169,26 @@ public class FriendSuggesterVerticle extends AbstractVerticle {
 					sendResponse(context, 404, failedResponse(String.format(ErrorConstants.NO_FRIENDS, userA)));
 				} else {
 					sendResponse(context, 200, successResponse("friends", friends));
+				}
+			} else {
+				sendResponse(context, 400, failedResponse(res.cause().getMessage()));
+			}
+		});
+	}
+
+	private void getSuggestedFriends(RoutingContext context) {
+		String userA = context.request().getParam("userA");
+		logger.info("Getting suggested friends for " + userA);
+		if (null == userA) {
+			sendResponse(context, 400, failedResponse(String.format(ErrorConstants.INVALID_PARAM, "userA")));
+		}
+		service.getSuggestions(userA).setHandler(res -> {
+			if (res.succeeded()) {
+				List<String> friends = res.result();
+				if (null == friends || friends.isEmpty()) {
+					sendResponse(context, 404, failedResponse(String.format(ErrorConstants.NO_SUGGESTIONS, userA)));
+				} else {
+					sendResponse(context, 200, successResponse("suggestions", friends));
 				}
 			} else {
 				sendResponse(context, 400, failedResponse(res.cause().getMessage()));
